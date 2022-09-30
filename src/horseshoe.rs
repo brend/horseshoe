@@ -55,24 +55,34 @@ impl Horseshoe {
             .collect();
     
         println!("Request: {:#?}", http_request);
-    
-        let re = Regex::new(r"([A-Z]+) ([^ ]+) HTTP/1\.1").unwrap();
-        let mut request = Request {};
-        let mut response = Response::new(stream);
 
-        // Parse headers
+        // parse headers
         let headers = parse_headers(&http_request);
-
-        for (name, value) in headers {
-            println!("Header name: {}, value: {}", name, value);
-        }
+    
+        // parse first line, whatever that's called
+        let re = Regex::new(r"([A-Z]+) ([^ ]+) HTTP/1\.1").unwrap();
+        let mut method = String::from("");
+        let mut path = String::from("");
 
         for cap in re.captures_iter(&http_request[0]) {
-            let method = &cap[1];
-            let path = &cap[2];
-
-            self.router.handle(method, path, &mut request, &mut response);
+            method = cap[1].to_uppercase().to_string();
+            path = cap[2].to_string();
+            break
         }
+
+        if method.is_empty() || path.is_empty() {
+            panic!("request line must contain method and path");
+        }
+
+        // prepare request and response
+        let mut request = Request {
+            method,
+            path,
+            headers,
+        };
+        let mut response = Response::new(stream);
+
+        self.router.handle(&mut request, &mut response);
     }
     
 }

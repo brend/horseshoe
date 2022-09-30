@@ -4,8 +4,9 @@ type Method = String;
 type Route = String;
 
 pub struct Request {
-    // pub method: String,
-    // pub path: String,
+    pub method: String,
+    pub path: String,
+    pub headers: Vec<(String, String)>,
 }
 
 pub struct Response {
@@ -42,19 +43,21 @@ impl Router {
         }
     }
 
-    pub fn handle(&self, method: &str, path: &str, request: &mut Request, response: &mut Response) {
-        if let Some(routes_for_method) = self.routes.get(&method.to_string()) {
-            if let Some(callbacks) = routes_for_method.get(&path.to_string()) {
+    pub fn handle(&self, request: &mut Request, response: &mut Response) {
+        if let Some(routes_for_method) = self.routes.get(&request.method) {
+            if let Some(callbacks) = routes_for_method.get(&request.path) {
                 
                 for callback in callbacks {
                     (callback.handler)(request, response);
                 }
 
             } else {
-                println!("No \"{}\" route registered for path \"{}\"", method, path);
+                println!("No \"{}\" route registered for path \"{}\"", &request.method, &request.path);
+
+                println!("{:?}", &routes_for_method.keys());
             }
         } else {
-            println!("No routes registered for method \"{}\"", method);
+            println!("No routes registered for method \"{}\"", &request.method);
         }
     }
 
