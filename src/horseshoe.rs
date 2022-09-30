@@ -2,9 +2,9 @@ use std::net::{TcpListener, TcpStream};
 use std::io::{prelude::*, BufReader};
 use regex::Regex;
 
-mod router;
+pub mod router;
 
-use router::{Router};
+use router::{Router, Request, Response};
 
 pub struct Horseshoe {
     pub router: Router,
@@ -39,12 +39,14 @@ impl Horseshoe {
     
         // GET /whats HTTP/1.1
         let re = Regex::new(r"([A-Z]+) ([^ ]+) HTTP/1\.1").unwrap();
+        let mut request = Request {};
+        let mut response = Response { stream };
         
         for cap in re.captures_iter(&http_request[0]) {
             let method = &cap[1];
             let path = &cap[2];
 
-            self.router.handle(method, path);
+            self.router.handle(method, path, &mut request, &mut response);
         }
     }
     
@@ -52,13 +54,13 @@ impl Horseshoe {
 
 impl Horseshoe {
     pub fn get<F>(&mut self, path: &str, handler: F)
-    where F: Fn() + 'static
+    where F: Fn(&mut Request, &mut Response) + 'static + for<'r, 's> Fn(&'r mut Request, &'s mut Response) -> ()
     {
         self.router.add(&"GET", path, handler);
     }
 
     pub fn post<F>(&mut self, path: &str, handler: F)
-    where F: Fn() + 'static
+    where F: Fn(&mut Request, &mut Response) + 'static + for<'r, 's> Fn(&'r mut Request, &'s mut Response) -> ()
     {
         self.router.add(&"POST", path, handler);
     }

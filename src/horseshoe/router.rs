@@ -1,26 +1,31 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, net::TcpStream, io::Write};
 
 type Method = String;
 type Route = String;
 
+pub struct Request {
+
+}
+
+pub struct Response {
+    pub stream: TcpStream
+}
+
+impl Response {
+    pub fn write_all(&mut self, buf: &[u8]) {
+        self.stream.write_all(&buf).unwrap();
+    }
+}
+
 pub struct Callback<F>
 where
-    F: Fn() -> (),
+    F: Fn(&mut Request, &mut Response) -> (),
 {
     pub handler: F,
 }
 
-impl<F> Callback<F>
-where
-    F: Fn() -> (),
-{
-    pub fn new(handler: F) -> Self {
-        Self { handler }
-    }
-}
-
 pub struct Router {
-    routes: HashMap<Method, HashMap<Route, Vec<Callback<Box<dyn Fn() -> ()>>>>>
+    routes: HashMap<Method, HashMap<Route, Vec<Callback<Box<dyn Fn(&mut Request, &mut Response) -> ()>>>>>
 }
 
 impl Router {
@@ -30,12 +35,12 @@ impl Router {
         }
     }
 
-    pub fn handle(&self, method: &str, path: &str) {
+    pub fn handle(&self, method: &str, path: &str, request: &mut Request, response: &mut Response) {
         if let Some(routes_for_method) = self.routes.get(&method.to_string()) {
             if let Some(callbacks) = routes_for_method.get(&path.to_string()) {
                 
                 for callback in callbacks {
-                    (callback.handler)();
+                    (callback.handler)(request, response);
                 }
 
             } else {
@@ -47,10 +52,10 @@ impl Router {
     }
 
     pub fn add<F>(&mut self, method: &str, path: &str, handler: F)
-    where F: Fn() + 'static
+    where F: Fn(&mut Request, &mut Response) + 'static + for<'r, 's> Fn(&'r mut Request, &'s mut Response) -> ()
     {
         let method = &method.to_uppercase().to_string();
-        let callback: Callback<Box<dyn Fn() -> ()>> = Callback::new(Box::new(handler));
+        let callback: Callback<Box<dyn Fn(&mut Request, &mut Response) -> ()>> = Callback { handler: Box::new(handler) };
 
         // get routes for method
         if !self.routes.contains_key(method) {
