@@ -16,5 +16,5 @@ use crate::horseshoe::router::{Request, Response};
 fn my_get_handler(_req: &mut Request, res: &mut Response) {
     println!("sending a response...");
     
-    res.status(404).send("This is a response");
+    res.status(404).send("This is a response").unwrap();
 }

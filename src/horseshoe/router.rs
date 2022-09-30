@@ -14,6 +14,33 @@ pub struct Response {
     status_code: Option<u32>,
 }
 
+fn code_name(status_code: u32) -> String {
+    let names: HashMap<u32, &str> = [
+        (100, "Continue"),
+        (101, "Switching Protocols"),
+        (102, "Processing"),
+        (103, "Early Hints"),
+        (200, "OK"),
+        (201, "Created"),
+        (202, "Accepted"),
+        (203, "Non-Authoritative Information"),
+        (204, "No Content"),
+        (205, "Reset Content"),
+        (400, "Bad Request"),
+        (401, "Unauthorized"),
+        (403, "Forbidden"),
+        (404, "Not Found"),
+        (500, "Internal Server Error"),
+    ]
+    .iter()
+    .cloned().collect();
+
+    match names.get(&status_code) {
+        Some(name) => name,
+        None => ""
+    }.to_string()
+}
+
 impl Response {
     pub fn new(stream: TcpStream) -> Response {
         Response {
@@ -28,16 +55,13 @@ impl Response {
         return self;
     }
     
-    pub fn write_all(&mut self, buf: &[u8]) {
-        self.stream.write_all(&buf).unwrap();
-    }
-
-    pub fn send(&mut self, content: &str) {
-        let status_line = format!("HTTP/1.1 {} OK", match self.status_code { Some(code) => code, None => 200 });
+    pub fn send(&mut self, content: &str) -> Result<(), std::io::Error> {
+        let status_code = match self.status_code { Some(code) => code, None => 200 };
+        let status_line = format!("HTTP/1.1 {} {}", status_code, code_name(status_code));
         let length = content.len();
         let response = format!("{}\r\nContent-Length: {}\r\n\r\n{}", status_line, length, content);
 
-        self.stream.write_all(response.as_bytes()).unwrap();
+        self.stream.write_all(response.as_bytes())
     }
 }
 
