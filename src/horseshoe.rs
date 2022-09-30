@@ -6,6 +6,11 @@ pub mod router;
 
 use router::{Router, Request, Response};
 
+pub struct Options {
+    pub address: String,
+    pub port: u32,
+}
+
 pub struct Horseshoe {
     pub router: Router,
 }
@@ -17,8 +22,8 @@ impl Horseshoe {
         }
     }
 
-    pub fn listen(self) {
-        let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
+    pub fn listen(self, options: Options) {
+        let listener = TcpListener::bind(format!("{}:{}", options.address, options.port)).unwrap();
     
         for stream in listener.incoming() {
             let stream = stream.unwrap();
@@ -40,7 +45,7 @@ impl Horseshoe {
         // GET /whats HTTP/1.1
         let re = Regex::new(r"([A-Z]+) ([^ ]+) HTTP/1\.1").unwrap();
         let mut request = Request {};
-        let mut response = Response { stream };
+        let mut response = Response::new(stream);
         
         for cap in re.captures_iter(&http_request[0]) {
             let method = &cap[1];

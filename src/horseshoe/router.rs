@@ -8,10 +8,16 @@ pub struct Request {
 }
 
 pub struct Response {
-    pub stream: TcpStream
+    stream: TcpStream
 }
 
 impl Response {
+    pub fn new(stream: TcpStream) -> Response {
+        Response {
+            stream
+        }
+    }
+    
     pub fn write_all(&mut self, buf: &[u8]) {
         self.stream.write_all(&buf).unwrap();
     }
