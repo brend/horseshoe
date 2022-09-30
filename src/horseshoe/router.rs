@@ -45,7 +45,7 @@ impl Router {
     pub fn add<F>(&mut self, method: &str, path: &str, handler: F)
     where F: Fn() + 'static
     {
-        let method = &method.to_string();
+        let method = &method.to_uppercase().to_string();
         let callback: Callback<Box<dyn Fn() -> ()>> = Callback::new(Box::new(handler));
 
         if !self.routes.contains_key(method) {
