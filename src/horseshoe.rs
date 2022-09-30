@@ -54,6 +54,6 @@ impl Horseshoe {
     pub fn get<F>(&mut self, path: &str, handler: F)
     where F: Fn() + 'static
     {
-        self.router.get(path, handler);
+        self.router.add(&"GET", path, handler);
     }
 }
