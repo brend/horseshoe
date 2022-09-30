@@ -10,18 +10,34 @@ pub struct Request {
 }
 
 pub struct Response {
-    stream: TcpStream
+    stream: TcpStream,
+    status_code: Option<u32>,
 }
 
 impl Response {
     pub fn new(stream: TcpStream) -> Response {
         Response {
-            stream
+            stream,
+            status_code: None,
         }
+    }
+
+    pub fn status(&mut self, code: u32) -> &mut Self {
+        self.status_code = Some(code);
+
+        return self;
     }
     
     pub fn write_all(&mut self, buf: &[u8]) {
         self.stream.write_all(&buf).unwrap();
+    }
+
+    pub fn send(&mut self, content: &str) {
+        let status_line = format!("HTTP/1.1 {} OK", match self.status_code { Some(code) => code, None => 200 });
+        let length = content.len();
+        let response = format!("{}\r\nContent-Length: {}\r\n\r\n{}", status_line, length, content);
+
+        self.stream.write_all(response.as_bytes()).unwrap();
     }
 }
 
