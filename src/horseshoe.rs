@@ -1,32 +1,19 @@
 use std::net::{TcpListener, TcpStream};
 use std::io::{prelude::*, BufReader};
 use regex::Regex;
-use std::collections::HashMap;
 
-struct Callback<F>
-where
-    F: Fn() -> (),
-{
-    pub handler: F,
-}
+mod router;
 
-impl<F> Callback<F>
-where
-    F: Fn() -> (),
-{
-    fn new(handler: F) -> Self {
-        Self { handler }
-    }
-}
+use router::{Router};
 
 pub struct Horseshoe {
-    routes: HashMap<String, Callback<Box<dyn Fn() -> ()>>>
+    pub router: Router,
 }
 
 impl Horseshoe {
     pub fn new() -> Horseshoe {
         Horseshoe {
-            routes: HashMap::<String, Callback<Box<dyn Fn() -> ()>>>::new()
+            router: Router::new(),
         }
     }
 
@@ -40,14 +27,6 @@ impl Horseshoe {
         }
     }
 
-    pub fn get<F>(&mut self, path: &str, handler: F)
-    where F: Fn() + 'static
-    {
-        let callback: Callback<Box<dyn Fn() -> ()>> = Callback::new(Box::new(handler));
-
-        self.routes.insert(path.to_string(), callback);
-    }
-
     fn handle_connection(&self, mut stream: TcpStream) {
         let buf_reader = BufReader::new(&mut stream);
         let http_request: Vec<_> = buf_reader
@@ -56,7 +35,7 @@ impl Horseshoe {
             .take_while(|line| !line.is_empty())
             .collect();
     
-        println!("Request: {:#?}", http_request);
+        // println!("Request: {:#?}", http_request);
     
         // GET /whats HTTP/1.1
         let re = Regex::new(r"([A-Z]+) ([^ ]+) HTTP/1\.1").unwrap();
@@ -64,15 +43,17 @@ impl Horseshoe {
         for cap in re.captures_iter(&http_request[0]) {
             let method = &cap[1];
             let path = &cap[2];
-    
-            println!("method: {}, path: {}", method, path);
 
-            if let Some(callback) = self.routes.get(&path.to_string()) {
-                (callback.handler)();
-            } else {
-                println!("Unhandled route");
-            }
+            self.router.handle(method, path);
         }
     }
     
+}
+
+impl Horseshoe {
+    pub fn get<F>(&mut self, path: &str, handler: F)
+    where F: Fn() + 'static
+    {
+        self.router.get(path, handler);
+    }
 }
