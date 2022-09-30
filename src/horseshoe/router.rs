@@ -4,7 +4,8 @@ type Method = String;
 type Route = String;
 
 pub struct Request {
-
+    // pub method: String,
+    // pub path: String,
 }
 
 pub struct Response {

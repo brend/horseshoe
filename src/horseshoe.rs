@@ -15,6 +15,20 @@ pub struct Horseshoe {
     pub router: Router,
 }
 
+fn parse_headers(http_request: &Vec<String>) -> Vec<(String, String)> {
+    let mut headers = vec![];
+
+    for header in http_request.iter().skip(1).take_while(|line| !(**line).is_empty()) {
+        let re = Regex::new(r"\s*([^:]+)\s*:\s*(.+)\s*").unwrap();
+
+        for cap in re.captures_iter(header) {
+            headers.push((cap[1].to_string(), cap[2].to_string()));
+        }
+    }
+
+    headers
+}
+
 impl Horseshoe {
     pub fn new() -> Horseshoe {
         Horseshoe {
@@ -40,13 +54,19 @@ impl Horseshoe {
             .take_while(|line| !line.is_empty())
             .collect();
     
-        // println!("Request: {:#?}", http_request);
+        println!("Request: {:#?}", http_request);
     
-        // GET /whats HTTP/1.1
         let re = Regex::new(r"([A-Z]+) ([^ ]+) HTTP/1\.1").unwrap();
         let mut request = Request {};
         let mut response = Response::new(stream);
-        
+
+        // Parse headers
+        let headers = parse_headers(&http_request);
+
+        for (name, value) in headers {
+            println!("Header name: {}, value: {}", name, value);
+        }
+
         for cap in re.captures_iter(&http_request[0]) {
             let method = &cap[1];
             let path = &cap[2];
