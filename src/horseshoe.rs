@@ -56,4 +56,10 @@ impl Horseshoe {
     {
         self.router.add(&"GET", path, handler);
     }
+
+    pub fn post<F>(&mut self, path: &str, handler: F)
+    where F: Fn() + 'static
+    {
+        self.router.add(&"POST", path, handler);
+    }
 }
