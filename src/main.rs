@@ -46,9 +46,9 @@ mod horseshoe {
         pub fn get<F>(&mut self, path: &str, handler: F)
         where F: Fn() + 'static
         {
-            let callback = Callback { foo: handler };
+            let callback: Callback<Box<dyn Fn() -> ()>> = Callback { foo: Box::new(handler) };
 
-            //self.routes.insert(path.to_string(), callback);
+            self.routes.insert(path.to_string(), callback);
         }
 
         fn handle_connection(&self, mut stream: TcpStream) {
@@ -69,12 +69,13 @@ mod horseshoe {
                 let path = &cap[2];
         
                 println!("method: {}, path: {}", method, path);
+
+                if let Some(callback) = self.routes.get(&path.to_string()) {
+                    (callback.foo)();
+                } else {
+                    println!("Unhandled route");
+                }
             }
-        
-            // let text = "Yabba dabba!";
-            // let response = format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}", text.len(), text);
-        
-            // stream.write_all(response.as_bytes()).unwrap();
         }
         
     }
@@ -88,8 +89,4 @@ fn main() {
     server.get("/whats/up", || println!("hi!"));
 
     server.listen();
-}
-
-fn handle_whats_up() {
-    println!("Hey, what's up?");
 }
