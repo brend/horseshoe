@@ -67,13 +67,37 @@ impl Response {
 
 pub struct Callback<F>
 where
-    F: Fn(&mut Request, &mut Response) -> (),
+    F: Fn(&mut Request, &mut Response, &mut Continuation) -> (),
 {
     pub handler: F,
 }
 
+pub struct Continuation<'a> {
+    //handlers: Vec<fn(&mut Request, &mut Response, &Continuation) -> ()>,
+    handlers: &'a Vec<Callback<Box<dyn Fn(&mut Request, &mut Response, &mut Continuation) -> ()>>>,
+    next_index: usize,
+    request: &'a mut Request,
+    response: &'a mut Response,
+}
+
+impl<'a> Continuation<'a> {
+    pub fn next(&mut self) {
+        if self.next_index >= self.handlers.len() {
+            return;
+        }
+
+        unsafe {
+            let p = self as *mut Continuation<'a>;
+            let callback = &(*p).handlers[self.next_index];
+
+            (&mut *p).next_index += 1;
+            (callback.handler)(self.request, self.response, &mut *p);
+        }
+    }
+}
+
 pub struct Router {
-    routes: HashMap<Method, HashMap<Route, Vec<Callback<Box<dyn Fn(&mut Request, &mut Response) -> ()>>>>>
+    routes: HashMap<Method, HashMap<Route, Vec<Callback<Box<dyn Fn(&mut Request, &mut Response, &mut Continuation) -> ()>>>>>
 }
 
 impl Router {
@@ -86,11 +110,14 @@ impl Router {
     pub fn handle(&self, request: &mut Request, response: &mut Response) {
         if let Some(routes_for_method) = self.routes.get(&request.method) {
             if let Some(callbacks) = routes_for_method.get(&request.path) {
+                let mut continuation = Continuation {
+                    request: request,
+                    response: response,
+                    next_index: 0,
+                    handlers: callbacks,
+                };
                 
-                for callback in callbacks {
-                    (callback.handler)(request, response);
-                }
-
+                continuation.next();
             } else {
                 println!("No \"{}\" route registered for path \"{}\"", &request.method, &request.path);
 
@@ -102,10 +129,10 @@ impl Router {
     }
 
     pub fn add<F>(&mut self, method: &str, path: &str, handler: F)
-    where F: Fn(&mut Request, &mut Response) + 'static + for<'r, 's> Fn(&'r mut Request, &'s mut Response) -> ()
+    where F: Fn(&mut Request, &mut Response, &mut Continuation) + 'static + for<'r, 's, 'c> Fn(&'r mut Request, &'s mut Response, &'c mut Continuation) -> ()
     {
         let method = &method.to_uppercase().to_string();
-        let callback: Callback<Box<dyn Fn(&mut Request, &mut Response) -> ()>> = Callback { handler: Box::new(handler) };
+        let callback: Callback<Box<dyn Fn(&mut Request, &mut Response, &mut Continuation) -> ()>> = Callback { handler: Box::new(handler) };
 
         // get routes for method
         if !self.routes.contains_key(method) {

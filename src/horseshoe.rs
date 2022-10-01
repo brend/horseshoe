@@ -4,7 +4,7 @@ use regex::Regex;
 
 pub mod router;
 
-use router::{Router, Request, Response};
+use router::{Router, Request, Response, Continuation};
 
 pub struct Options {
     pub address: String,
@@ -89,14 +89,14 @@ impl Horseshoe {
 
 impl Horseshoe {
     pub fn get<F>(&mut self, path: &str, handler: F)
-    where F: Fn(&mut Request, &mut Response) + 'static + for<'r, 's> Fn(&'r mut Request, &'s mut Response) -> ()
+    where F: Fn(&mut Request, &mut Response, &mut Continuation) + 'static + for<'r, 's, 'c> Fn(&'r mut Request, &'s mut Response, &'c mut Continuation) -> ()
     {
         self.router.add(&"GET", path, handler);
     }
 
-    pub fn post<F>(&mut self, path: &str, handler: F)
-    where F: Fn(&mut Request, &mut Response) + 'static + for<'r, 's> Fn(&'r mut Request, &'s mut Response) -> ()
-    {
-        self.router.add(&"POST", path, handler);
-    }
+    // pub fn post<F>(&mut self, path: &str, handler: F)
+    // where F: Fn(&mut Request, &mut Response) + 'static + for<'r, 's> Fn(&'r mut Request, &'s mut Response) -> ()
+    // {
+    //     self.router.add(&"POST", path, handler);
+    // }
 }
