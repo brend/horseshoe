@@ -1,12 +1,64 @@
-use std::{collections::HashMap, net::TcpStream, io::Write};
+use std::{collections::HashMap, net::TcpStream, io::Write, ops::Index};
 
 type Method = String;
 type Route = String;
+
+pub struct Params {
+    map: HashMap<String, String>,
+}
+
+impl Params {
+    pub fn new() -> Self {
+        Params { map: HashMap::new() }
+    }
+}
+
+impl Index<&String> for Params {
+    type Output = String;
+
+    fn index(&self, index: &String) -> &Self::Output {
+        self.map.get(index).unwrap()
+    }
+}
+
+impl Index<&str> for Params {
+    type Output = String;
+
+    fn index(&self, index: &str) -> &Self::Output {
+        self.map.get(&index.to_string()).unwrap()
+    }
+}
+
+pub fn match_route(route: &str, instance: &str) -> Result<Params, String> {
+    let route_components = route.split("/").collect::<Vec<_>>();
+    let instance_components = instance.split("/").collect::<Vec<_>>();
+    let mut map = HashMap::new();
+    let mut i = 0;
+
+    while i < instance_components.len() {
+        if i >= route_components.len() {
+            break;
+        }
+
+        let rc = route_components[i];
+
+        if rc.starts_with(":") {
+            let name = &rc[1..];
+
+            map.insert(name.to_string(), instance_components[i].to_string());
+        }
+
+        i += 1;
+    }
+
+    return Ok(Params { map });
+}
 
 pub struct Request {
     pub method: String,
     pub path: String,
     pub headers: Vec<(String, String)>,
+    pub params: Params,
 }
 
 pub struct Response {

@@ -4,7 +4,8 @@ use regex::Regex;
 
 pub mod router;
 
-use router::{Router, Request, Response, Continuation};
+pub use router::{Router, Request, Response, Continuation, Params};
+use router::{match_route};
 
 pub struct Options {
     pub address: String,
@@ -79,6 +80,7 @@ impl Horseshoe {
             method,
             path,
             headers,
+            params: Params::new(),
         };
         let mut response = Response::new(stream);
 
