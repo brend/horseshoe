@@ -5,7 +5,6 @@ use regex::Regex;
 pub mod router;
 
 pub use router::{Router, Request, Response, Continuation, Params};
-use router::{match_route};
 
 pub struct Options {
     pub address: String,

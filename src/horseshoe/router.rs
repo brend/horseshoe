@@ -41,11 +41,14 @@ pub fn match_route(route: &str, instance: &str) -> Result<Params, String> {
         }
 
         let rc = route_components[i];
+        let ic = instance_components[i];
 
         if rc.starts_with(":") {
             let name = &rc[1..];
 
-            map.insert(name.to_string(), instance_components[i].to_string());
+            map.insert(name.to_string(), ic.to_string());
+        } else if rc != ic {
+            return Err(format!("mismatched path component; expected: {}, found: {}", rc, ic));
         }
 
         i += 1;
@@ -159,9 +162,28 @@ impl Router {
         }
     }
 
+    fn find_route(&self, method: &String, path: &String) -> Result<(&str, &Vec<Callback<Box<dyn for<'r, 's, 't0, 't1> Fn(&'r mut Request, &'s mut Response, &'t0 mut Continuation<'t1>)>>>, Params), String> {
+        if let Some(routes_for_method) = self.routes.get(method) {
+            for route in routes_for_method.keys() {
+                if let Ok(params) = match_route(route, &path) {
+                    let callbacks = routes_for_method.get(route).unwrap();
+
+                    return Ok((route, callbacks, params));
+                }
+            }
+        }
+
+        return Err(format!("No route found matching {}", path));
+    }
+
     pub fn handle(&self, request: &mut Request, response: &mut Response) {
-        if let Some(routes_for_method) = self.routes.get(&request.method) {
-            if let Some(callbacks) = routes_for_method.get(&request.path) {
+        match self.find_route(&request.method, &request.path) {
+            Err(message) => println!("Error matching path {}: {}", request.path, message),
+            Ok((route, callbacks, params)) => {
+                println!("matched path {} with route {}", request.path, route);
+
+                request.params = params;
+
                 let mut continuation = Continuation {
                     request: request,
                     response: response,
@@ -170,13 +192,7 @@ impl Router {
                 };
                 
                 continuation.next();
-            } else {
-                println!("No \"{}\" route registered for path \"{}\"", &request.method, &request.path);
-
-                println!("{:?}", &routes_for_method.keys());
             }
-        } else {
-            println!("No routes registered for method \"{}\"", &request.method);
         }
     }
 
